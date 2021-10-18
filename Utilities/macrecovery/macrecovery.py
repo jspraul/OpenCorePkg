@@ -9,7 +9,6 @@ Copyright (c) 2019, vit9696
 from __future__ import print_function
 
 import argparse
-import binascii
 import datetime
 import hashlib
 import json
@@ -85,7 +84,7 @@ def mlb_from_eeee(eeee):
 
 def int_from_unsigned_bytes(bytes, byteorder):
   if byteorder == 'little': bytes = bytes[::-1]
-  encoded = binascii.hexlify(bytes)
+  encoded = str(bytes).encode('hex')
   return int(encoded, 16)
 
 # zhangyoufu https://gist.github.com/MCJack123/943eaca762730ca4b7ae460b731b68e7#gistcomment-3061078 2021-10-08
@@ -120,8 +119,13 @@ def verify_chunklist(cnkpath):
         if signature_method == 1:
             data = f.read(256)
             assert len(data) == 256
-            signature = int_from_unsigned_bytes(data, 'little')
-            plaintext = 0x1ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff003031300d0609608648016503040201050004200000000000000000000000000000000000000000000000000000000000000000 | int_from_unsigned_bytes(digest, 'big')
+            plaintext = 0x1ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff003031300d0609608648016503040201050004200000000000000000000000000000000000000000000000000000000000000000
+            try:
+              signature = int.from_bytes(data, 'little')
+              plaintext |= int.from_bytes(digest, 'big')
+            except AttributeError: # Python < 3.2: type object 'int' has no attribute 'from_bytes'
+              signature = int_from_unsigned_bytes(data, 'little')
+              plaintext |= int_from_unsigned_bytes(digest, 'big')
             assert pow(signature, 0x10001, Apple_EFI_ROM_public_key_1) == plaintext
         elif signature_method == 2:
             data = f.read(32)
